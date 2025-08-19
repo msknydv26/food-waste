@@ -1,11 +1,13 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.linear_model import LinearRegression
+import joblib
 
-# Load dataset
+# -------------------
+# Load Dataset & Model
+# -------------------
 df = pd.read_csv("food_waste_data.csv")
+model = joblib.load("model.pkl")   # Load pre-trained model
 
 st.title("🍲 Smart Canteen: Food Waste Prediction")
 st.write("Predict meal demand & reduce food waste in hostels/corporate cafeterias.")
@@ -23,13 +25,6 @@ st.subheader("Food Waste by Day of Week")
 waste_by_day = df.groupby("DayOfWeek")["FoodWasted"].mean()
 st.bar_chart(waste_by_day)
 
-# Model Training
-X = pd.get_dummies(df[["DayOfWeek", "Weather", "Attendance"]], drop_first=True)
-y = df["MealsCooked"]
-
-model = LinearRegression()
-model.fit(X, y)
-
 # -------------------
 # Prediction Tool
 # -------------------
@@ -38,11 +33,13 @@ day = st.selectbox("Day of Week", df["DayOfWeek"].unique())
 weather = st.selectbox("Weather", df["Weather"].unique())
 attendance = st.slider("Expected Attendance", 150, 300, 250)
 
-# Prepare input
+# Prepare input (align with training features)
+X = pd.get_dummies(df[["DayOfWeek", "Weather", "Attendance"]], drop_first=True)
 input_data = pd.DataFrame([[day, weather, attendance]], columns=["DayOfWeek", "Weather", "Attendance"])
 input_data = pd.get_dummies(input_data)
 input_data = input_data.reindex(columns=X.columns, fill_value=0)
 
+# Prediction
 predicted_meals = model.predict(input_data)[0]
 recommended = round(predicted_meals)
 
