@@ -1,33 +1,38 @@
 import streamlit as st
+import pickle
 import pandas as pd
-import numpy as np
 
-# Try loading model using joblib first, then fallback to pickle
-try:
-    import joblib
-    model = joblib.load("model.pkl")
-except:
-    import pickle
-    with open("model.pkl", "rb") as f:
-        model = pickle.load(f)
+# Load the trained model and encoder
+with open("model.pkl", "rb") as f:
+    saved_objects = pickle.load(f)
 
-st.title("🍲 Food Waste Prediction App")
-st.write("Predict food demand in hostels/cafeterias to reduce waste.")
+model = saved_objects["model"]
+label_encoder = saved_objects["label_encoder"]
 
-# Input fields
-attendance = st.number_input("Student/Employee Attendance", min_value=0, max_value=1000, value=200)
-day_of_week = st.selectbox("Day of the Week", ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"])
-weather = st.selectbox("Weather", ["Sunny", "Rainy", "Cloudy"])
+# Streamlit app
+st.title("🍽️ Meal Prediction App")
 
-# Encode categorical inputs
-day_mapping = {"Monday":0,"Tuesday":1,"Wednesday":2,"Thursday":3,"Friday":4,"Saturday":5,"Sunday":6}
-weather_mapping = {"Sunny":0,"Rainy":1,"Cloudy":2}
+st.write("Predict the number of meals consumed based on attendance, day of week, and weather.")
 
-day_val = day_mapping[day_of_week]
-weather_val = weather_mapping[weather]
+# User inputs
+attendance = st.number_input("Attendance", min_value=0, step=1)
+day_of_week = st.selectbox("Day of the Week", ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])
+weather = st.selectbox("Weather", label_encoder.classes_)
 
-# Predict button
-if st.button("Predict Food Requirement"):
-    input_data = np.array([[attendance, day_val, weather_val]])
-    prediction = model.predict(input_data)[0]
-    st.success(f"🍛 Predicted Meals Needed: {int(prediction)}")
+# Encode categorical features
+day_mapping = {
+    "Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3,
+    "Friday": 4, "Saturday": 5, "Sunday": 6
+}
+day_encoded = day_mapping[day_of_week]
+weather_encoded = label_encoder.transform([weather])[0]
+
+# Prediction
+if st.button("Predict Meals Consumed"):
+    input_df = pd.DataFrame([[attendance, day_encoded, weather_encoded]],
+                            columns=["Attendance", "DayOfWeek", "Weather"])
+    prediction = model.predict(input_df)[0]
+    st.success(f"🍴 Predicted Meals Consumed: {round(prediction)}")
+
+
+
